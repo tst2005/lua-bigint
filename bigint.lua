@@ -3,12 +3,14 @@ local instance = assert(class.instance)
 
 local bigint = class("bigint", {})
 
-function bigint:init(v)
-	self.base = 10
-	self.size = 3
+function bigint:init(v, parentconfig)
+	--print("init:", v, type(parentconfig))
+	parentconfig = type(parentconfig) ~= "table" and {} or parentconfig
+	--self.name = "bigint"
+	self.base = parentconfig.base or 10
+	self.size = parentconfig.size or 9 -- precision base^size should be less than the native max integer value (signed int: 2^31-1 or 2^63-1) : approx 2*10^9 or 9*10^18
 	if v then
 		self:fromstring(v, 10)
-		--self.strv = v
 	end
 end
 
@@ -22,7 +24,7 @@ end
 
 function bigint:_base10_fromstring(v)
 	assert(type(v)=="string")
-	assert(not v:find("^[0-9+]$"), "invalid format must be strickly [0-9]+")
+	assert(v:find("^[0-9]+$"), "invalid format must be strickly [0-9]+")
 	local r = {}
 	local size = self.size
 	while #v > 0 do
@@ -32,25 +34,14 @@ function bigint:_base10_fromstring(v)
 	end
 	return r
 end
---[[
-local function table_reverse(t)
-	local r = {}
-	local max = #t
-	for i=1,max do
-		r[max-i+1] = t[i]
-	end
-	return r
-end
-]]--
---print(require"tprint"( table_reverse({1,2,3})))
 
 function bigint:tostring()
 	assert(self.v)
 	local r = {}
 	local t = self.v
---	for i,v in ipairs(self.v) do
 
-	--print("before clean #t :", #t)
+--print("before clean #t :", #t)
+
 	-- clean all first segment equal to 0
 	for i=#t,1,-1 do
 		if t[i]==0 then
@@ -61,56 +52,66 @@ function bigint:tostring()
 			break
 		end
 	end
-	--print("after clean #t :", #t)
+--print("after clean #t :", #t)
 	for i=#t,1,-1 do
 		local v = t[i]
 		local x = ("%.0f"):format(v)
 		if i ~= #t then
 			x = (("0"):rep(self.size-#x))..x
 		end
-		--print("+", i, x)
+--print("+", i, x)
 		r[#r+1] = x
 	end
 	return table.concat(r, self.sep or "")
 end
+-- a way to estimate the approximative size of the number (10^n)
+function bigint:how()
+	return ((#self.v -1) * self.size + #tostring(self.v[#self.v]))
+end
 
 function bigint:add(mores)
+	--if type(number) == "number" then
+	if type(mores)=="string" then
+		local x = instance(bigint, nil, self)
+		assert(x.size == self.size)
+		x:fromstring(mores, 10)
+		mores = x
+	end
+	assert(type(mores)=="table" and mores.name=="bigint", "argument #1 must be a bigint")
 --	assert(type(n)=="number")
-	--assert(math.type(n)=="integer")
 --	assert(n>=0)
 	local max = (self.base ^ self.size)
 	local floor = math.floor
-	local abs = math.abs
-	local min = math.min
-	local function safeadd(cur, incr)
+	local function safeadd(cur, incr, max)
 		return
 			--abs( max - incr%max - cur) - max,
-			(max-cur >= incr%max) and cur+incr%max or ((incr%max) - (max - cur)), -- over: ce qui depasse]]
+			(max-cur > incr%max) and (cur+incr%max) or ((incr%max) - (max - cur)), -- over: ce qui depasse]]
 			floor( cur / max + (incr)%max / max ) -- rest: multiple de max
 	end
-	local more = nil --mores[1] --%max
+	local incrs = mores.v
+	local more = nil
 	local r = {}
-	for i, v in ipairs(self.v) do
+	--if #mores.v > #self.v then print("WORKAROUND") return mores:add(self) end
+	--for i, v in ipairs(self.v) do
+	for i=1,math.max(#self.v, #incrs) do local v = self.v[i]
 		local new = v
-		if more and more ~=0 or mores[i] then
-			more = (more or 0) + (mores[i] or 0)%max
+		if more and more ~=0 or incrs[i] then
+			more = (more or 0) + (incrs[i] or 0)%max
 		end
-		if more and more ~= 0 then
-			local lastmore = more
-			new, more = safeadd(v, more)
+		if v and more then --and more ~= 0 then
+		--	local lastmore = more
+			new, more = safeadd(v%max, more%max, max)
 		--	print(i, "safeadd:", v, lastmore, "=>", new, more, "max", max)
 		end
-		r[i] = new
+		if new then
+			r[i] = new
+		end
 	end
 	if more then
 		r[#r+1] = more
 	end
 	self.v = r
 	return self
-end
-
-function bigint:how()
-	return ((#self.v -1) * self.size + #tostring(self.v[#self.v]))
 end
 
 local M = {}
