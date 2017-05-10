@@ -32,6 +32,7 @@ function bigint:_base10_fromstring(v)
 	end
 	return r
 end
+--[[
 local function table_reverse(t)
 	local r = {}
 	local max = #t
@@ -40,20 +41,37 @@ local function table_reverse(t)
 	end
 	return r
 end
+]]--
 --print(require"tprint"( table_reverse({1,2,3})))
 
 function bigint:tostring()
 	assert(self.v)
 	local r = {}
-	local max = #self.v
-	for _i,v in ipairs(self.v) do
+	local t = self.v
+--	for i,v in ipairs(self.v) do
+
+	--print("before clean #t :", #t)
+	-- clean all first segment equal to 0
+	for i=#t,1,-1 do
+		if t[i]==0 then
+			--print(i, t[i], "equal to 0, remove!")
+			t[i]=nil
+		else
+			--print(i, t[i], "not equal to 0, break")
+			break
+		end
+	end
+	--print("after clean #t :", #t)
+	for i=#t,1,-1 do
+		local v = t[i]
 		local x = ("%.0f"):format(v)
-		if _i ~= max then
+		if i ~= #t then
 			x = (("0"):rep(self.size-#x))..x
 		end
+		--print("+", i, x)
 		r[#r+1] = x
 	end
-	return table.concat(table_reverse(r), self.sep or "")
+	return table.concat(r, self.sep or "")
 end
 
 function bigint:add(mores)
@@ -70,15 +88,17 @@ function bigint:add(mores)
 			(max-cur >= incr%max) and cur+incr%max or ((incr%max) - (max - cur)), -- over: ce qui depasse]]
 			floor( cur / max + (incr)%max / max ) -- rest: multiple de max
 	end
-	local more = 0 --mores[1] --%max
+	local more = nil --mores[1] --%max
 	local r = {}
 	for i, v in ipairs(self.v) do
 		local new = v
-		more = (more or 0) + ( mores[i] or 0)%max
+		if more and more ~=0 or mores[i] then
+			more = (more or 0) + (mores[i] or 0)%max
+		end
 		if more and more ~= 0 then
 			local lastmore = more
 			new, more = safeadd(v, more)
-			print(i, "safeadd:", v, lastmore, "=>", new, more, "max", max)
+		--	print(i, "safeadd:", v, lastmore, "=>", new, more, "max", max)
 		end
 		r[i] = new
 	end
@@ -87,6 +107,10 @@ function bigint:add(mores)
 	end
 	self.v = r
 	return self
+end
+
+function bigint:how()
+	return ((#self.v -1) * self.size + #tostring(self.v[#self.v]))
 end
 
 local M = {}

@@ -29,43 +29,47 @@ x:fromstring(src, 10)
 
 ]]--
 
+local a
 src = "123456789012345678901234567890123456789012345678901234"
-src = "99991234"
-local a = "99991234"
+--src = "99991234"
+--a = "99991234"
+src = src:rep(10)
+a = ("1"):rep(#src-1)
 
 local tprint = require"tprint"
 tprint.ishort = false
 
 local x0 = bigint()
 x0.size = 4
-x0.sep = " "
+--x0.sep = " "
 x0:fromstring(src, 10)
 
 local a0 = bigint()
 a0.size = 4
 a0.sep = " "
 a0:fromstring(a, 10)
-print(tprint( a0.v))
+--print(tprint( a0.v))
 
 x = bigint()
 x.size = 4
-x.sep = " "
+--x.sep = " "
 x:fromstring(src, 10)
 
-print(tprint( x.v))
+--print(tprint( x.v))
 
-
-print("add", a)
+print(src)
+print("+ "..a)
 
 x:add(a0.v)
 
-print(src)
-print(x0:tostring())
-print(x:tostring())
+--print(x0:tostring())
+--print(x:tostring())
 
-print(tprint( x0.v))
-print(tprint( x.v))
+--print(tprint( x0.v))
+--print(tprint( x.v))
 
 --print(#x.v, x.size, #tostring(x.v[#x.v]))
-print("estimate: ~10^"..(#x.v -1) * x.size + #tostring(x.v[#x.v]))
+--(#x.v -1) * x.size + #tostring(x.v[#x.v]))
 
+print("= "..x:tostring())
+print("estimate: between 10^"..(x:how()-1).." and 10^"..(x:how()))
