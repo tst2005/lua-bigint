@@ -12,7 +12,9 @@ function bigint:init(v, parentconfig)
 	if v then
 		self:fromstring(v, 10)
 	end
+	require"mini.class.autometa"(self, bigint) -- copy all __* bigint methods into the metatable of the instance
 end
+
 
 function bigint:fromstring(v, base)
 	if base == 10 then
@@ -70,12 +72,12 @@ function bigint:how()
 end
 
 function bigint:add(mores)
-	--if type(number) == "number" then
+	if type(mores) == "number" then
+		mores = ("%.0f"):format(mores)
+	end
 	if type(mores)=="string" then
-		local x = instance(bigint, nil, self)
-		assert(x.size == self.size)
-		x:fromstring(mores, 10)
-		mores = x
+		mores = instance(bigint, mores, self)
+		assert(mores.size == self.size)
 	end
 	assert(type(mores)=="table" and mores.name=="bigint", "argument #1 must be a bigint")
 --	assert(type(n)=="number")
@@ -113,6 +115,11 @@ function bigint:add(mores)
 	self.v = r
 	return self
 end
+
+--bigint.__add = function(...) print("__add", ...) return bigint.add(...) end
+bigint.__add = bigint.add
+--bigint.__mul = bigint.mul
+bigint.__tostring = bigint.tostring
 
 local M = {}
 setmetatable(M, {__call = function(_, ...) return instance(bigint, ...) end})
