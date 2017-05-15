@@ -84,33 +84,38 @@ function bigint:add(mores)
 --	assert(n>=0)
 	local max = (self.base ^ self.size)
 	local floor = math.floor
+--	local function safeadd(cur, incr, max)
+--		return
+--			--abs( max - incr%max - cur) - max,
+--			(max-cur > incr%max) and (cur+incr%max) or ((incr%max) - (max - cur)), -- over: ce qui depasse]]
+--			floor( cur / max + (incr)%max / max ) -- rest: multiple de max
+--	end
 	local function safeadd(cur, incr, max)
-		return
-			--abs( max - incr%max - cur) - max,
-			(max-cur > incr%max) and (cur+incr%max) or ((incr%max) - (max - cur)), -- over: ce qui depasse]]
-			floor( cur / max + (incr)%max / max ) -- rest: multiple de max
+		return (cur+incr)%max, floor((cur+incr)/max)
 	end
-	local incrs = mores.v
 	local more = nil
 	local r = {}
-	--if #mores.v > #self.v then print("WORKAROUND") return mores:add(self) end
-	--for i, v in ipairs(self.v) do
-	for i=1,math.max(#self.v, #incrs) do local v = self.v[i]
+
+	local a, b = self.v, mores.v
+	if #b > #a then
+		a,b = b,a
+	end
+	for i, v in ipairs(a) do
 		local new = v
-		if more and more ~=0 or incrs[i] then
-			more = (more or 0) + (incrs[i] or 0)%max
+		if more and more ~=0 or b[i] then
+			more = (more or 0) + (b[i] or 0)%max
 		end
-		if v and more then --and more ~= 0 then
+		if v and more and more ~= 0 then
 		--	local lastmore = more
 			new, more = safeadd(v%max, more%max, max)
 		--	print(i, "safeadd:", v, lastmore, "=>", new, more, "max", max)
 		end
-		if new then
-			r[i] = new
-		end
+		--if new then
+			r[i] = new or 0
+		--end
 	end
 	if more then
-		r[#r+1] = more
+		r[#r+1] = more %max
 	end
 	self.v = r
 	return self
